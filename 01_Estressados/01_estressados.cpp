@@ -6,30 +6,24 @@ using namespace std;
 bool existe(vector<int> vet, int valor){
   for(int i = 0; i < (int) vet.size(); i++)
       if(vet[i] == valor)
-           
-           return true;
-
-  return false;         
+        return true;
+return false;         
 }
 
 int contar(int num){
-    int cont = 0;
-    
+int cont = 0;
     vector <int> vet{-1, 60, 54, 76, 80};
-
     for (int i = 0; i < (int) vet.size(); i++){
        if (vet [i] == num)
            cont++;
     }
-    return cont;
+      return cont;
 }
 
 int procura (vector<int> vet, int valor){
   for(int i = 0; i < (int) vet.size(); i++)
   if(vet[i] == valor)
-       
-       return 1;
-
+      return 1;
 return -1;
 
 }
@@ -46,7 +40,7 @@ int procurar_valor_apos (vector<int> vet, int num, int pos){
 }
 
 int procurar_menor_pos(vector<int> vet){
-
+  
 int pos = 0;
 
   for( int i = 0; i < (int) vet.size(); i++)
@@ -74,7 +68,7 @@ int procurar_menor(vector<int> vet){
     if(vet[i] < menor)
      menor = vet[i];
   }
-       return menor; 
+    return menor; 
 }  
 
 int procurar_menor_pos_apartir(vector<int> vet){
@@ -86,7 +80,7 @@ int procurar_menor_pos_apartir(vector<int> vet){
           if(vet[i] < menor)
              vet[i] = menor; 
           }
-              return menor;
+            return menor;
 }
 
 string mais_homens_ou_mulheres(vector<int> vet){
@@ -179,21 +173,15 @@ float calcular_stress_medio(vector<int> vet){
   float media = 0;
 
      for( int i = 0; i < (int) vet.size(); i++){
-     
           media = abs(vet[i]);         
 }
           media = media/vet.size();
-          
               return media;
-
 }
 
 int main(){
-
     vector<int> exemplo = {10,1,2,-5,-5,-5};
-
     for (int i = 0; i < (int)exemplo.size(); i++) 
-        cout<<exemplo[i]<<" ";
-
+          cout<<exemplo[i]<<" ";
 }
 
