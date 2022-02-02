@@ -8,7 +8,7 @@ void setSize(sf::Sprite& sprite, int width, int height) {
 }
 
 struct Entity {
-  int x {0};
+  int x {0}; 
   int y {0};
   int step {0};
   sf::Sprite sprite;
