@@ -1,248 +1,254 @@
 #include <iostream>
+#include <vector>
 #include <map>
 #include <set>
-#include <vector>
 #include <memory>
-#include <stdexcept>
 #include <sstream>
-#include <iterator>
 
 using namespace std;
 
 class Tweet {
-public:
     int id;
+    string nome;
     string msg;
-    string usuario;
-    set<string>likes;
-    Tweet *retweet;
+    set<string> likes;
 public:
-    Tweet(int id, string msg, string usuario) : id(id), msg(msg), usuario(usuario) {};
+    Tweet(int id, string nome, string msg) : id(id), nome(nome), msg(msg) {}
 
-    int getId() {
+    int getId() const {
         return id;
     }
 
-    string getMsg() {
-        return msg;
+    void Like(const string nome) {
+         likes.insert(nome); 
     }
 
-    friend ostream& operator<<(ostream& os, const Tweet& t) {
-        os << "Tweet: " << t.id << " - " << t.msg << " - " << t.usuario << endl;
+    friend ostream& operator<<(ostream& os, const Tweet& tweet) {
+        os  << tweet.id << " : " << tweet.nome << "(" << tweet.msg << ")";
+
+        if(!tweet.likes.empty()) {
+            os << " [ ";
+            for(const auto& like : tweet.likes) {
+                os << like << " ";
+            }
+            os << "]";
+        }
         return os;
-    }
-
-    void like(string usuario) {
-        likes.insert(usuario);
-    }
-
-    void setRetweet(Tweet *rt) {
-        retweet = rt;
-    }
-
-    bool deleted{false};
-
-    void setDeleted() {
-        deleted = true;
-    }
-
-    bool isDeleted() {
-        return deleted;
     }
 };
 
 class Inbox {
-    map<int, Tweet*> timeline;
-    map<int, Tweet*> myTweets;
 public:
-    void addTweet(Tweet *t) {
-        timeline[t->getId()] = t;
-    }
-    
-    vector<Tweet*> getTimeline() {
-        vector<Tweet*> tweets;
-        for (auto t : timeline) {
-            tweets.push_back(t.second);
-        }
-        return tweets;
+    map<int, Tweet*> alltweets;
+    map<int, Tweet*> unread;
+public:
+    Inbox() {}
+
+    void Add(Tweet* tweet) {
+        alltweets[tweet->getId()] = tweet;
+        unread[tweet->getId()] = tweet;
     }
 
-    friend ostream& operator<<(ostream& os, const Inbox& i) {
-        for (auto t : i.timeline) {
-            os << *t.second << endl;
+    void lidas(Tweet* msg) {
+        alltweets.insert(pair<int, Tweet*>(msg->getId(), msg));
+    }
+
+    vector<Tweet*> getnaolidas() {
+        vector<Tweet*> msgnaolidas;
+        for(auto& tweet : unread) {
+            msgnaolidas.push_back(tweet.second);
+            alltweets.insert(pair<int, Tweet*>(tweet.first, tweet.second));
         }
-        return os;
+        unread.clear();
+        return msgnaolidas;
+    }
+
+    vector<Tweet*> getAll() {
+        vector<Tweet*> alltweetsvector;
+        for(auto& tweet : alltweets) {
+            alltweetsvector.push_back(tweet.second);
+        }
+        return alltweetsvector;
     }
 
     Tweet* getTweet(int id) {
-        return timeline[id];
+        auto it = alltweets.find(id);
+        if(it == alltweets.end()) {
+           throw "Tweet não encontrado";
+        }
+        return it->second; 
     }
 
-    void removeTweet(string& nome) {
-        for (auto t : timeline) {
-            if (t.second->usuario == nome) {
-                t.second->setDeleted();
+    void toString() {
+        for(auto& tweet : this->getnaolidas()) {
+            cout << *tweet << endl;
+        }
+
+        if(this->getnaolidas().empty()) {
+            for(auto& tweet : this->getAll()) {
+                cout << *tweet << endl;
             }
         }
-    }
 
-    void myTweet(Tweet *t) {
-        myTweets[t->getId()] = t;
-    }
-
-    vector<Tweet*> getMyTweets() {
-        vector<Tweet*> tweets;
-        for (auto t : myTweets) {
-            tweets.push_back(t.second);
-        }
-        return tweets;
+        cout << endl;
     }
 };
 
-class Usuario {
+class Usuario{
     string nome;
     Inbox inbox;
     map<string, Usuario*> seguidores;
-    map<string, Usuario*> seguindos;
+    map<string, Usuario*> seguindo;
 public:
-    Usuario (string nome) : nome(nome) {};
+    Usuario(string nome) : nome(nome) {}
 
-    friend ostream& operator<<(ostream& os, const Usuario& u) {
-        os << u.nome << endl;
-        os << u.inbox;
-        return os;
+    void seguir(Usuario* other) {
+        if(seguindo.find(other->nome) == seguindo.end()) {
+            seguindo.insert(pair<string, Usuario*>(other->nome, other));
+            other->seguidores.insert(pair<string, Usuario*>(nome, this));
+        }
     }
 
-    void seguir(Usuario * other) {
-        seguidores[other->nome] = other;
-        other->seguindos[nome] = this;
+    void deixarDeSeguir(string nome) {
+      auto it = seguindo.find(nome);
+      if(it == seguindo.end()) {
+        throw runtime_error("Usuário não existe");
+      }
+      auto it2 = seguidores.find(nome);
+      it->second->seguidores.erase(it2);
+        seguindo.erase(it); 
+    }
+
+    void like(int twId) {
+       Tweet* tweet = inbox.getTweet(twId);
+       if(tweet == nullptr) {
+           throw runtime_error("Tweet não existe");
+       }
+         tweet->Like(nome); 
     }
 
     Inbox& getInbox() {
         return inbox;
     }
 
-    void tweet(Tweet *t) {
-        inbox.addTweet(t);
-        for (auto s : seguidores) {
-            s.second->getInbox().addTweet(t);
+    void sendTweet(Tweet* tweet) {
+        inbox.Add(tweet);
+        for(auto& seguidor : seguidores) {
+            seguidor.second->getInbox().Add(tweet);
         }
     }
 
-    void deixarSeguir(string& nome) {
-        seguidores.erase(nome);
-        seguindos.erase(nome);
-    }
+    void toString() {
+        cout << nome << endl;
+        cout << " seguidos: [" << endl;
+        for(auto& seguindo : seguindo) {
+            cout << seguindo.first << " " << endl;
+        }
+        cout << "]" << endl;
 
-    void like(int twId) {
-        inbox.getTweet(twId)->like(nome);
+        cout << " seguidores: [ " << endl;
+        for(auto& seguidores : seguidores) {
+            cout << seguidores.first << " " << endl;
+        }
+        cout << "]" << endl;
     }
-
-    void deixarSeguirAll();
-    void rejectAll();
 };
 
-class Controle {
-public:
-    int nextTweetId { 0 };
+class Controller {
     map<string, shared_ptr<Usuario>> usuarios;
     map<int, shared_ptr<Tweet>> tweets;
+    int nextTweetId = 0;
+
+    Tweet* createTweet(string nome, string msg) {
+        Tweet* tweet = new Tweet(nextTweetId, nome, msg);
+        tweets.insert(pair<int, shared_ptr<Tweet>>(nextTweetId, shared_ptr<Tweet>(tweet)));
+        nextTweetId++;
+        return tweet;
+    }
+
 public:
+    Controller() {}
+
     void addUsuario(string nome) {
-        usuarios[nome] = make_shared<Usuario>(nome);
-    }
-
-    friend ostream& operator<<(ostream& os, const Controle& c) {
-        for (auto u : c.usuarios) {
-            os << *u.second << endl;
+        if(usuarios.find(nome) != usuarios.end()) {
+            throw runtime_error("Usuário já existe");
         }
-        return os;
+        usuarios.insert(pair<string, shared_ptr<Usuario>>(nome, make_shared<Usuario>(nome)));
     }
-private:
-    Tweet* criarTweet(string nome, string msg) {
-        Tweet *t = new Tweet(nextTweetId, msg, nome);
-        tweets[nextTweetId] = make_shared<Tweet>(*t);
-        nextTweetId++;
-        return t;
-    }
-public:
+
     Usuario* getUsuario(string nome) {
-        return usuarios[nome].get();
+        auto it = usuarios.find(nome);
+        if(it == usuarios.end()) {
+            throw runtime_error("Usuário não existe");
+        }
+        return it->second.get();
     }
 
-    void tweet(string nome, string msg) {
-        Usuario *u = getUsuario(nome);
-        Tweet *t = criarTweet(nome, msg);
-        u->tweet(t);
+    void sendTweet(string nome, string msg) {
+        Usuario* usuario = getUsuario(nome);
+        Tweet* tweet = new Tweet(nextTweetId, nome, msg);
+        usuario->sendTweet(tweet);
     }
 
-    void retweet(string nome, int twId) {
-        Usuario *u = getUsuario(nome);
-        Tweet *t = u->getInbox().getTweet(twId);
-        Tweet *rt = new Tweet(nextTweetId, t->getMsg(), nome);
-        rt->setRetweet(t);
-        tweets[nextTweetId] = make_shared<Tweet>(*rt);
-        nextTweetId++;
-        u->tweet(rt);
-    }
-
-    void removerUsuario(string nome) {
-        usuarios.erase(nome);
+    void toString() {
+        for(auto& usuario : usuarios) {
+            usuario.second->toString();
+        }
+        cout << endl;
     }
 };
 
-    int main () {
-        Controle sistema;
+int main() {
+    try {
+        Controller controller;
 
-        while(true) {
-            try {
-                string cmd;
-                cin >> cmd;
-                if (cmd == "addUsuario") {
-                    string nome;
-                    cin >> nome;
-                    sistema.addUsuario(nome);
-                } else if (cmd == "removerUsuario") {
-                    sistema.removerUsuario(cmd);
-                } else if (cmd == "seguir") {
-                    string nome, nome2;
-                    cin >> nome >> nome2;
-                    sistema.getUsuario(nome)->seguir(sistema.getUsuario(nome2));
-                } else if (cmd == "tweet") {
-                    string nome, msg;
-                    cin >> nome >> msg;
-                    sistema.tweet(nome, msg);
-                } else if (cmd == "retweet") {
-                    string nome, nome2;
-                    int twId;
-                    cin >> nome >> nome2 >> twId;
-                    sistema.retweet(nome, twId);
-                } else if (cmd == "like") {
-                    string nome;
-                    int twId;
-                    cin >> nome >> twId;
-                    sistema.getUsuario(nome)->like(twId);
-                } else if (cmd == "deixarSeguir") {
-                    string nome, nome2;
-                    cin >> nome >> nome2;
-                    sistema.getUsuario(nome)->deixarSeguir(nome2);
-                } else if (cmd == "show") {
-                    cout << sistema << endl;
-                } else if (cmd == "timeline") {
-                    string nome;
-                    cin >> nome;
-                    cout << sistema.getUsuario(nome)->getInbox() << endl;
-                } else if (cmd == "end") {
-                    break;
-                } else {
-                    cout << "Comando invalido" << endl;
-                } 
-            } catch (exception& e) {
-                cout << e.what() << endl;
-            }
-        }
-        return 0;
+        cout << "addUsuario" << endl;
+
+        controller.addUsuario("joao");
+        controller.addUsuario("maria");
+        controller.addUsuario("pedro");
+        
+        controller.toString();
+
+        cout << "sendTweet" << endl;
+
+        controller.sendTweet("joao", "oi");
+        controller.sendTweet("maria", "tudo bem?");
+        controller.sendTweet("pedro", "como vai?");
+
+        controller.toString();
+
+        cout << "seguir" << endl;
+        
+        controller.getUsuario("joao")->seguir(controller.getUsuario("maria"));
+        controller.getUsuario("maria")->seguir(controller.getUsuario("pedro"));
+        controller.getUsuario("pedro")->seguir(controller.getUsuario("joao"));
+
+        controller.toString();
+
+        cout << "like" << endl;
+
+        controller.getUsuario("joao")->like(1);
+        controller.getUsuario("maria")->like(2);
+        controller.getUsuario("pedro")->like(3);
+
+        controller.getUsuario("joao")->getInbox().toString();
+        controller.getUsuario("maria")->getInbox().toString();
+        controller.getUsuario("pedro")->getInbox().toString();
+
+        controller.toString();
+
+        cout << "deixarDeSeguir" << endl;
+
+        controller.getUsuario("joao")->deixarDeSeguir("maria");
+        controller.getUsuario("maria")->deixarDeSeguir("pedro");
+        controller.getUsuario("pedro")->deixarDeSeguir("joao");
+
+        controller.toString();
+
+    } catch(exception& e) {
+        cout << e.what() << endl;
     }
 
-               
-           
+    return 0;
+}
